@@ -1,0 +1,229 @@
+﻿// Name: Robert Reed
+// Project: Cyber-Dino Racing
+// Date: 03/24/2014
+using UnityEngine;
+using System.Collections;
+
+public class TrainHeadClass : MonoBehaviour 
+{
+	//An array with the position of the wayPoints
+	public Transform[] wayPoints;
+
+	//the index for the array
+	private int index = 0;
+
+	//the point to start lerping from
+	public Vector3 startPoint;
+
+	//the point to end lerping
+	public Vector3 endPoint;
+
+	//the start rotation
+	private Quaternion startRotation;
+
+	//the speed of the head train
+	public float speed;
+
+	//the corrected move variable
+	private float move;
+
+	//check to see if the script is ready to run
+	private bool ableToStart = false;
+
+	//The distance between the start point and the end point
+	private float dist;
+
+	//two vector3 for getting the direction to turn to
+	private Vector3 heading;
+	private Vector3 direction;
+
+	
+	// Use this for initialization
+	void Start () 
+	{
+		//check to see if any of the waypoints are null
+		for(int i = 0; i < wayPoints.Length; i++)
+		{
+			//if there's a waypoint to go to then it's able to start
+			if(wayPoints[i] != null)
+			{
+				ableToStart = true;
+			}
+			//else you can't start
+			else
+			{
+				ableToStart = false;
+				break;
+			}
+		}
+
+		//if the script can start
+		if(ableToStart == true)
+		{
+			//set the index to 0
+			index = 0;
+
+			//get the start position
+			startPoint = wayPoints[0].position;
+
+			//get the end position
+			endPoint = wayPoints[index].position;
+		}
+		else
+		{
+			Debug.Log("One of the elements in the wayPoint array is null!");
+		}
+	}
+	
+	// Update is called once per frame
+	void FixedUpdate () 
+	{
+		//if the array of way points is full
+		if(ableToStart == true)
+		{
+			//if the position is the same as the end position
+			if(transform.position == endPoint)
+			{
+				//reset the move variable
+				move = 0.0f;
+
+				//if it hasn't reached the last way point
+				if(index < wayPoints.Length - 1)
+				{
+					//increment the index
+					index++;
+	
+					//set the start point
+					startPoint = wayPoints[index - 1].position;
+
+					//set the end point
+					endPoint = wayPoints[index].position;
+
+					//set the starting rotation
+					startRotation = transform.rotation;
+
+					//get the distance of the start and end point
+					dist = Vector3.Distance(startPoint, endPoint);
+
+					//get the rotation point to turn to
+					heading = endPoint - startPoint;
+					direction = heading / heading.magnitude;
+				}
+				//if it is at the end of the array
+				else
+				{
+					//set the index to 0
+					index = 0;
+
+					//set the start point to the end of the array
+					startPoint = wayPoints[wayPoints.Length - 1].position;
+				
+					//set the end point to the start of the arraay
+					endPoint = wayPoints[index].position;
+
+					//set the starting rotation
+					startRotation = transform.rotation;
+
+					//get the distance between the start point and the end point
+					dist = Vector3.Distance(startPoint, endPoint);
+
+					//get the rotation point to turn to
+					heading = endPoint - startPoint;
+					direction = heading / heading.magnitude;
+				}
+			
+			}
+
+			//get the lerp move position
+			move += (speed / dist) * Time.deltaTime;
+
+			//set the position to the lerp
+			transform.position = Vector3.Lerp(startPoint, endPoint, move);
+
+			//Quaternion turnTo = Quaternion.LookRotation(direction, new Vector3(0, 1, 0));
+		
+			if(transform.rotation != Quaternion.Euler(direction))
+			{
+				//set the rotation to the lerp
+				transform.rotation = Quaternion.Lerp (startRotation, Quaternion.LookRotation(direction, new Vector3(0, 1, 0)), move * 25);
+			}
+
+		}
+	}
+}
+
+
+
+
+
+
+
+/*
+
+using UnityEngine;
+using System.Collections;
+
+/// <summary>
+/// Moves the attached transform from one Vector3 position to another and back again,
+/// over a specified time interval.
+/// </summary>
+public class Oscillate : MonoBehaviour {
+	/// <summary>
+	/// Whether we should move like a Sawtooth animation, with suddent turn arounds at the end
+	/// or like a sine wave with the ends "rounded" for smoother animation.
+	/// Sine will not maintain a straight line - so if you want a straight line, stick with Sawtooth
+	/// or hard code an axis in to the result.
+	/// </summary>
+	public enum MovementTypes {
+		Sawtooth,
+		Sine
+	}
+	
+	//Inspector Variables. These should be assigned in the inspector, but can be assigned by script at run time.
+	public Vector3 StartPosition = new Vector3(-2, -2, -2);
+	public Vector3 EndPosition = new Vector3(2, 2, 2);
+	public float TimeToMoveBetweenPoints = 1f;
+	public MovementTypes MovementType = MovementTypes.Sawtooth;
+	
+	//These variables are used to maintain state as the program runs.
+	private float startTime;
+	
+	/// <summary>
+	/// When the script begins, it needs to store the elapsed time in order to "zero" the animation.
+	/// </summary>
+	void Start () {
+		this.startTime = Time.time;
+	}
+	
+	/// <summary>
+	/// Each frame, we need to check the current time and apply the oscillation to the transformation
+	/// </summary>
+	void Update () {
+		// We "wrap" the results over TimeToMoveBetweenPoints * 2 because we move to and then move back
+		// which is twice the movement.
+		float timeOffset = (Time.time - this.startTime) % (this.TimeToMoveBetweenPoints * 2);
+		
+		// We will need a variable to store the percent through an animation we are
+		float percent = 0f;
+		
+		// If the time is less than or equal to TimeToMoveBetweenPoints, we are on the first
+		// "half" of oscillation - or oscillation "out" - otherwise we are on the second half
+		// - or oscillation "in"
+		if(timeOffset <= TimeToMoveBetweenPoints){
+			percent = timeOffset / TimeToMoveBetweenPoints;
+			if(MovementTypes.Sawtooth == this.MovementType){
+				this.transform.position = Vector3.Lerp(StartPosition, EndPosition, percent);
+			}else{
+				this.transform.position = Vector3.Slerp(StartPosition, EndPosition, percent);
+			}
+		}else{
+			percent = (timeOffset - TimeToMoveBetweenPoints) / TimeToMoveBetweenPoints;
+			if(MovementTypes.Sawtooth == this.MovementType)
+			{
+				this.transform.position = Vector3.Lerp(EndPosition, StartPosition, percent);
+			}else{
+				this.transform.position = Vector3.Slerp(EndPosition, StartPosition, percent);
+			}
+		}
+	}
+}*/
